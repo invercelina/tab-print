@@ -51,8 +51,7 @@ class VirtualKeyboard(QWidget):
         """)
             
         self.keys = [
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '←'],
-            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+            ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', '←'],
             ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
             ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
         ]
@@ -198,6 +197,21 @@ class VirtualKeyboard(QWidget):
 
     def next_pressed(self):
         """다음 버튼 클릭 시 동작"""
+        # shift 상태 초기화 (대문자 상태 해제)
+        if self.is_uppercase:
+            self.is_uppercase = False
+            self.update_keyboard_labels()
+            
+            # shift 버튼 색상 업데이트
+            shift_button = None
+            for widget in self.findChildren(QPushButton):
+                if widget.text().lower() == 'shift':
+                    shift_button = widget
+                    break
+                    
+            if shift_button:
+                shift_button.setStyleSheet(self.get_special_button_style(self.shift_btn_color))
+        
         # 콜백 함수가 설정되어 있으면 호출
         if self.on_next_pressed:
             self.on_next_pressed()
