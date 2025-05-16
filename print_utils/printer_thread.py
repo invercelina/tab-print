@@ -1,7 +1,7 @@
-from PySide6.QtCore import QThread, Signal
-from PySide6.QtGui import QFont, QFontMetrics
-from .device_functions import get_device_list, get_device_id, open_device, draw_image, get_preview_bitmap, print_image, close_device, load_font, draw_text2
-from .cffi_defs import ffi, SMART_OPENDEVICE_BYID, PAGE_FRONT, PANELID_COLOR, PANELID_BLACK, PANELID_OVERLAY
+from PySide6.QtCore import QThread, Signal, QPointF, QRectF, Qt
+from PySide6.QtGui import QFont, QPainter, QFont
+from PySide6.QtPrintSupport import QPrinter
+# from PySide6.QtCore import QPointF
 
 class PrinterThread(QThread):
     finished = Signal()
@@ -13,116 +13,45 @@ class PrinterThread(QThread):
         self.file_name = file_name
         self.text = "Hello, World!"  # 기본 텍스트 설정
     
-    
-    def calculate_appropriate_font_width(self, text, max_width=208):
-        """
-        텍스트가 최대 너비(max_width)를 초과하지 않는 적절한 폰트 너비를 계산합니다.
-        최대 너비를 텍스트 길이로 나누고 여유 공간을 위해 4를 더합니다.
-        대문자 비율이 높으면 폰트 너비를 줄입니다.
-        """
-        # if not text:
-        #     return 25  # 텍스트가 없는 경우 기본값 반환
-        
-        # if len(text) * 25 < max_width:
-        #     font_width = 25
-        # else:
-        #     font_width = max(1, int(max_width / len(text)) + 4)
-        
-        # # 대문자 비율 계산
-        # uppercase_count = sum(1 for c in text if c.isupper())
-        # uppercase_ratio = uppercase_count / len(text) if text else 0
-        
-        # # 대문자 비율이 50% 이상이면 폰트 너비 조정
-        # if uppercase_ratio >= 0.5:
-        #     font_width = max(1, font_width - 1)
-        
-        # # 대문자 비율이 80% 이상이면 추가로 폰트 너비 조정
-        # if uppercase_ratio >= 0.8:
-        #     font_width = max(1, font_width - 1)
-        font_width = 25
-        return font_width
-    
     def run(self):
-
         try:
-            # 장치 목록 조회
-            result, printer_list = get_device_list()
-            if result != 0:
-                self.error.emit("프린터 목록 가져오기 실패")
-                return
-                
-            # 장치 선택
-            device_index = 0
-            device_id = get_device_id(printer_list, device_index)
+            printer = QPrinter()
+            painter = QPainter()
             
-            # 장치 열기
-            result, device_handle = open_device(device_id, SMART_OPENDEVICE_BYID)
-            if result != 0:
-                self.error.emit("장치 열기 실패")
-                return
+            if painter.begin(printer):
+                # 텍스트 영역을 QRectF로 정의 (x, y, width, height)
+                text_rect1 = QRectF(74, 130, 133-74, 20)
+                text_rect2 = QRectF(74, 150, 133-74, 20)
                 
-            try:
-                # 폰트 정보
-                font_name = "Pretendard"
-                font_size = 14  # 폰트 크기 고정
+                # 정렬 옵션 설정 (가운데 정렬)
+                alignment = Qt.AlignCenter
                 
-                # 한 글자당 적절한 폰트 너비 계산
-                font_width = self.calculate_appropriate_font_width(self.text)
-                
-                print(font_width)
-                print(self.text)
-                print(PANELID_BLACK)
-                result = draw_text2(device_handle, 
-                                    PAGE_FRONT, 
-                                    1, 
-                                    220, 
-                                    413, 
-                                    208, 
-                                    100, 
-                                    font_name, 
-                                    font_size, 
-                                    25,  # 글자당 적절한 폰트 너비 전달
-                                    0x01, 
-                                    0x000000, 
-                                    'self.text',  # 사용자가 입력한 텍스트 사용
-                                    0, 
-                                    0x01, 
-                                    0
-                                    )
-                if result != 0:
-                    self.error.emit("텍스트 그리기 실패")
-                    return
-                print(PANELID_BLACK)
-                result = draw_text2(device_handle, 
-                                    PAGE_FRONT, 
-                                    1,  
-                                    220, 
-                                    476, 
-                                    208, 
-                                    100, 
-                                    font_name, 
-                                    font_size, 
-                                    25,  # 글자당 적절한 폰트 너비 전달
-                                    0x01, 
-                                    0x000000, 
-                                    'self.text',  # 사용자가 입력한 텍스트 사용
-                                    0, 
-                                    0x01, 
-                                    0
-                                    )
-                if result != 0:
-                    self.error.emit("텍스트 그리기 실패")
-                    return
-                
-                # 이미지 인쇄
-                result = print_image(device_handle)
-                if result != 0:
-                    self.error.emit("이미지 인쇄 실패")
-                    return
+                # 텍스트 자동 크기 조절 함수
+                def fit_text_to_rect(rect, text, max_size=10, min_size=2):
+                    # 최적 폰트 크기 찾기
+                    size = max_size
+                    font = QFont("Pretendard", size)
+                    painter.setFont(font)
                     
+                    # 텍스트 너비가 사각형 너비보다 클 경우 폰트 크기 줄이기
+                    while painter.fontMetrics().horizontalAdvance(text) > rect.width() and size > min_size:
+                        size -= 0.5
+                        font.setPointSizeF(size)
+                        painter.setFont(font)
+                    
+                    return font
+                
+                # 각 텍스트 영역에 맞게 폰트 크기 조절하여 출력
+                for rect in [text_rect1, text_rect2]:
+                    font = fit_text_to_rect(rect, self.text)
+                    painter.setFont(font)
+                    painter.drawText(rect, alignment, self.text)
+                
+                painter.end()
                 self.finished.emit()
-            finally:
-                # 장치 닫기 (항상 실행)
-                close_device(device_handle)
+            else:
+                self.error.emit("프린터를 초기화할 수 없습니다.")
+                
         except Exception as e:
             self.error.emit(f"인쇄 중 오류 발생: {str(e)}")
+        

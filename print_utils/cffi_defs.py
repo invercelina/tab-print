@@ -118,6 +118,11 @@ int SmartComm_DrawText2(
     DRAWTEXT2INFO* pdt2info, 
     wchar_t* szText
 );
+         
+int SmartComm_GetRibbonType( 
+    HSMART hHandle,  
+    int* pnRibbonType 
+);
 
 """)
 

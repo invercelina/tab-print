@@ -180,3 +180,11 @@ def draw_text2(device_handle, page, panel, x, y, width, height, font_name, font_
         print(f"❌ SmartComm_DrawText2 호출 실패 (오류 코드: {result})")
 
     return result
+
+def get_ribbon_type(device_handle):
+    """
+    SmartComm_GetRibbonType 함수를 호출하여 리본 종류를 가져오는 함수
+    """
+    ribbon_type = ffi.new("int *")
+    result = lib.SmartComm_GetRibbonType(device_handle, ribbon_type)
+    return result, ribbon_type[0]
